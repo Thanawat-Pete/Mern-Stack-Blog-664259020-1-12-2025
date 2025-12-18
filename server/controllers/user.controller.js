@@ -1,6 +1,9 @@
 const bcrypt = require('bcrypt');
 const UserModel = require('../models/User.js');
+const jwt = require('jsonwebtoken');
 const salt = bcrypt.genSaltSync(10);
+require('dotenv').config();
+const secret = process.env.SECRET;
 
 exports.registerUser = async (req, res) => {
     try {
@@ -31,15 +34,20 @@ exports.loginUser = async (req, res) => {
         return res.status(400).json({ message: 'Username and password are required' });
     }
     try {
-        const user = await UserModel.findOne({ username });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        const userDoc = await UserModel.findOne({ username });
+        if(!userDoc) {
+            return  res.status(401).json({ message: 'User not found!' });
         }
-        const isPasswordValid = bcrypt.compareSync(password, user.password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ message: 'Invalid password' });
-        }
-        res.status(200).json({ message: 'Login successful' });
+        const isPasswordMatch = bcrypt.compareSync(password, userDoc.password);
+        if(!isPasswordMatch) {
+            return res.status(401).json({ message: 'Invalid password!' });
+        } 
+        jwt.sign({username, id: userDoc._id}, secret, {}, (err, token)=>{
+            if(err) {
+                res.status(500).json({ message: 'Internal server error: Authentication failed!' });
+            }
+        res.send({message: 'Login successful', accessToken: token});
+        })
     } catch (error) {
         res.status(500).json({ message: error.message || 'Error processing request' });
     }
