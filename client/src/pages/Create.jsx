@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import articleService from "../services/article.services";
 import Editor from "../components/Editor";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 const Create = () => {
   const navigate = useNavigate();
@@ -12,7 +15,6 @@ const Create = () => {
     title: "",
     summary: "",
     content: "",
-    timestamps: "",
     coverPreview: "",
     coverFile: null,
   });
@@ -40,19 +42,44 @@ const Create = () => {
     setFormData((prev) => ({ ...prev, content: value }));
   };
 
+  // upload file to Supabase
+  const uploadFile = async (file) => {
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage
+      .from('uploads')
+      .upload(`upload/${fileName}`, file);
+
+    if (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(`upload/${fileName}`);
+
+    return urlData.publicUrl;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      const data = new FormData();
-      data.append("title", formData.title);
-      data.append("summary", formData.summary);
-      data.append("content", formData.content);
-      data.append("timestamps", formData.timestamps);
-
+      let coverUrl = "";
       if (formData.coverFile) {
-        data.append("cover", formData.coverFile);
+        coverUrl = await uploadFile(formData.coverFile);
+        if (!coverUrl) {
+          Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถอัปโหลดไฟล์ได้", "error");
+          return;
+        }
       }
+
+      const data = {
+        title: formData.title,
+        summary: formData.summary,
+        content: formData.content,
+        cover: coverUrl,
+      };
 
       await articleService.createArticle(data);
 
@@ -80,60 +107,73 @@ const Create = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* TITLE */}
-          <input
-            type="text"
-            name="title"
-            placeholder="หัวข้อบทความ"
-            className="input input-bordered w-full"
-            value={formData.title}
-            onChange={handleChange}
-            required
-          />
+          <div>
+            <label className="label">
+              <span className="label-text">หัวข้อบทความ</span>
+            </label>
+            <input
+              type="text"
+              name="title"
+              placeholder="หัวข้อบทความ"
+              className="input input-bordered w-full"
+              value={formData.title}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
           {/* COVER */}
-          <input
-            type="file"
-            accept="image/*"
-            className="file-input file-input-bordered w-full"
-            onChange={handleFileChange}
-            required
-          />
+          <div>
+            <label className="label">
+              <span className="label-text">ภาพปก</span>
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              className="file-input file-input-bordered w-full"
+              onChange={handleFileChange}
+              required
+            />
+          </div>
 
           {/* Preview */}
           {formData.coverPreview && (
-            <img
-              src={formData.coverPreview}
-              alt="Preview"
-              className="w-full h-48 object-cover rounded-lg"
-            />
+            <div className="border rounded-lg overflow-hidden max-w-md mx-auto">
+              <img
+                src={formData.coverPreview}
+                alt="Preview"
+                className="w-full h-64 object-contain"
+              />
+            </div>
           )}
 
           {/* SUMMARY */}
-          <textarea
-            name="summary"
-            placeholder="สรุปบทความ"
-            className="textarea textarea-bordered w-full"
-            rows={4}
-            value={formData.summary}
-            onChange={handleChange}
-            required
-          />
-
-          {/* TIMESTAMP */}
-          <input
-            type="datetime-local"
-            name="timestamps"
-            className="input input-bordered w-full"
-            value={formData.timestamps}
-            onChange={handleChange}
-          />
+          <div>
+            <label className="label">
+              <span className="label-text">สรุปบทความ</span>
+            </label>
+            <textarea
+              name="summary"
+              placeholder="สรุปบทความ"
+              className="textarea textarea-bordered w-full"
+              rows={4}
+              value={formData.summary}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
           {/* CONTENT */}
-          <Editor
-            ref={editorRef}
-            value={formData.content}
-            onChange={handleContentChange}
-          />
+          <div>
+            <label className="label">
+              <span className="label-text">เนื้อหาบทความ</span>
+            </label>
+            <Editor
+              ref={editorRef}
+              value={formData.content}
+              onChange={handleContentChange}
+            />
+          </div>
 
           <button type="submit" className="btn btn-primary w-full">
             🚀 สร้างบทความ

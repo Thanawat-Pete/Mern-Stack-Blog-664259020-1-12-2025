@@ -1,19 +1,6 @@
 const multer = require("multer")
 const path = require("path");
-const firebaseConfig = require("../config/firebase.config")
-
-const {
-    getStorage,
-    ref,
-    uploadBytes,
-    getDownloadURL,
-} = require("firebase/storage");
-
-// initalize Firebase Storage
-const { initializeApp } = require("firebase/app");
-const { emitWarning } = require("process");
-const app = initializeApp(firebaseConfig);
-const firebaseStorage = getStorage(app);
+const supabase = require("../config/supabase")
 
 //set Storage Engine
 const upload = multer({
@@ -36,25 +23,35 @@ function checkFileType(file, cb){
     }
 }
 
-//Upload to firebase
-async function uploadToFirebase(req, res, next) {
-    if (!req.cover) {
+//Upload to Supabase
+async function uploadToSupabase(req, res, next) {
+    if (!req.file) {
         next();
         return;
     }
     //save location
-    const storageRef = ref(firebaseStorage, `upload/${req.cover.originalname}`);
+    const filePath = `upload/${req.file.originalname}`;
 
-    const metadata = {
-        contentType: req.cover.mimetype,
-    };
     try {
-        const snapshot = await uploadBytesResumble(storageRef, req.cover.buffer, metadata);
-        req.cover.firebaseUrl = await getDownloadURL(snapshort.ref)
+        const { data, error } = await supabase.storage.from('uploads').upload(filePath, req.file.buffer, {
+            contentType: req.file.mimetype,
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(filePath);
+        req.file.supabaseUrl = urlData.publicUrl;
         next();
     } catch (error) {
-        res.status(500).json({message: error.message || "Something went wrong while upload to filebase"})
+        res.status(500).json({message: error.message || "Something went wrong while uploading to Supabase"})
     }
 }
+
+const fileMiddleware = {
+    upload,
+    uploadToSupabase
+};
 
 module.exports = fileMiddleware;

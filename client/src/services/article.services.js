@@ -17,7 +17,7 @@ const createArticle = async(article) => {
     return await api.post(API_URL + "/" , article, 
         {
             headers: {
-                "Content-Type": "multipart/form-data"
+                "Content-Type": "application/json"
             }
         }
     );
@@ -25,7 +25,11 @@ const createArticle = async(article) => {
 }
 
 const updateArticle = async(id, article) => {
-    return await api.put(API_URL + "/" + id, article);
+    return await api.put(API_URL + "/" + id, article, {
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
 }
 
 const deleteArticle = async(id) => {

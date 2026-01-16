@@ -4,6 +4,9 @@ import Swal from "sweetalert2";
 import DOMPurify from "dompurify";
 import articleService from "../services/article.services";
 import Editor from "../components/Editor";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 const Edit = () => {
   const { id } = useParams();
@@ -14,7 +17,8 @@ const Edit = () => {
     cover: "",
     summary: "",
     content: "",
-    timestamps: "",
+    coverFile: null,
+    coverPreview: "",
   });
 
   useEffect(() => {
@@ -28,7 +32,7 @@ const Edit = () => {
           cover: article.cover || "",
           summary: article.summary || "",
           content: article.content || "",
-          timestamps: article.timestamps ? article.timestamps.slice(0, 16) : "",
+          coverPreview: article.cover || "",
         });
 
         setLoading(false);
@@ -53,11 +57,58 @@ const Edit = () => {
     }));
   };
 
+  // file input
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      coverFile: file,
+      coverPreview: URL.createObjectURL(file),
+    }));
+  };
+
+  // upload file to Supabase
+  const uploadFile = async (file) => {
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage
+      .from('uploads')
+      .upload(`upload/${fileName}`, file);
+
+    if (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(`upload/${fileName}`);
+
+    return urlData.publicUrl;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      await articleService.updateArticle(id, formData);
+      let coverUrl = formData.cover;
+      if (formData.coverFile) {
+        coverUrl = await uploadFile(formData.coverFile);
+        if (!coverUrl) {
+          Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถอัปโหลดไฟล์ได้", "error");
+          return;
+        }
+      }
+
+      const data = {
+        title: formData.title,
+        summary: formData.summary,
+        content: formData.content,
+        cover: coverUrl,
+      };
+
+      await articleService.updateArticle(id, data);
 
       await Swal.fire({
         icon: "success",
@@ -89,66 +140,75 @@ const Edit = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* TITLE */}
-          <input
-            type="text"
-            name="title"
-            className="input input-bordered w-full"
-            value={formData.title}
-            onChange={handleChange}
-            required
-          />
+          <div>
+            <label className="label">
+              <span className="label-text">หัวข้อบทความ</span>
+            </label>
+            <input
+              type="text"
+              name="title"
+              className="input input-bordered w-full"
+              value={formData.title}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
           {/* COVER */}
-          <input
-            type="text"
-            name="cover"
-            className="input input-bordered w-full"
-            value={formData.cover}
-            onChange={handleChange}
-            required
-          />
+          <div>
+            <label className="label">
+              <span className="label-text">ภาพปก (อัปโหลดใหม่หรือใช้เดิม)</span>
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              className="file-input file-input-bordered w-full"
+              onChange={handleFileChange}
+            />
+          </div>
 
           {/* IMAGE PREVIEW */}
-          {formData.cover && (
-            <div className="border rounded-lg overflow-hidden">
+          {formData.coverPreview && (
+            <div className="border rounded-lg overflow-hidden max-w-md mx-auto">
               <img
-                src={formData.cover}
+                src={formData.coverPreview}
                 alt="Preview"
-                className="w-full h-48 object-cover"
+                className="w-full h-64 object-contain"
                 onError={(e) => (e.target.style.display = "none")}
               />
             </div>
           )}
 
           {/* SUMMARY */}
-          <textarea
-            name="summary"
-            className="textarea textarea-bordered w-full"
-            rows={4}
-            value={formData.summary}
-            onChange={handleChange}
-            required
-          />
-
-          {/* TIMESTAMP */}
-          <input
-            type="datetime-local"
-            name="timestamps"
-            className="input input-bordered w-full"
-            value={formData.timestamps}
-            onChange={handleChange}
-          />
+          <div>
+            <label className="label">
+              <span className="label-text">สรุปบทความ</span>
+            </label>
+            <textarea
+              name="summary"
+              className="textarea textarea-bordered w-full"
+              rows={4}
+              value={formData.summary}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
           {/* CONTENT (Editor) */}
-          <Editor
-            value={formData.content}
-            onChange={(value) =>
-              setFormData((prev) => ({
-                ...prev,
-                content: value,
-              }))
-            }
-          />
+          <div>
+            <label className="label">
+              <span className="label-text">เนื้อหาบทความ</span>
+            </label>
+            <Editor
+              value={formData.content}
+              onChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  content: value,
+                }))
+              }
+            />
+          </div>
 
           {/* SUBMIT */}
           <button type="submit" className="btn btn-warning w-full">
