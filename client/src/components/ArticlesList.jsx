@@ -12,8 +12,10 @@ const ArticlesList = ({ items }) => {
 
   return (
     <div className="flex flex-col gap-6">
-      {items.map((it) => (
-        <Card key={it.itemId || it.id} item={it} />
+      {items.map((it, index) => (
+        <Card key={it.itemId || it.id}
+         index={index}
+         item={it} />
       ))}
     </div>
   );

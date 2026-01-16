@@ -46,7 +46,7 @@ exports.loginUser = async (req, res) => {
             if(err) {
                 res.status(500).json({ message: 'Internal server error: Authentication failed!' });
             }
-        res.send({message: 'Login successful', accessToken: token});
+        res.send({message: 'Login successful', id: userDoc._id, user: username, accessToken: token});
         })
     } catch (error) {
         res.status(500).json({ message: error.message || 'Error processing request' });
