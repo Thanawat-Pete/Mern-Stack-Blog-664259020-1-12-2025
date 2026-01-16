@@ -1,16 +1,31 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const Card = ({ item, index = 0 }) => {
   const navigate = useNavigate();
   if (!item) return null;
 
-  const { id, title, cover, author, createAt, summary } = item;
+  const {
+    _id,
+    title,
+    cover,
+    author,
+    createdAt,
+    summary,
+  } = item;
+
   const isEven = index % 2 === 0;
+
+  // รองรับ author 2 แบบ (string | object)
+  const authorName =
+    typeof author === "object" ? author?.username : author;
+
+  const authorId =
+    typeof author === "object" ? author?._id : null;
 
   return (
     <div
-      onClick={() => navigate(`/article/${id}`)}
+      onClick={() => navigate(`/article/${_id}`)}
       className={`
         group cursor-pointer flex flex-col sm:flex-row
         bg-white/80 dark:bg-gray-900/60 backdrop-blur 
@@ -47,22 +62,27 @@ const Card = ({ item, index = 0 }) => {
             {title}
           </h2>
 
-          {/* Author กดได้ */}
+          {/* Author */}
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            ✍️
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/article/author/${author}`);
-              }}
-              className="
-                text-blue-600 dark:text-blue-400 
-                hover:underline cursor-pointer transition
-              "
-            >
-              {author}
-            </span>{" "}
-            • {createAt}
+            ✍️{" "}
+            {authorId ? (
+              <Link
+                to={`/article/author/${authorId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="
+                  text-blue-600 dark:text-blue-400
+                  hover:underline cursor-pointer transition
+                "
+              >
+                {authorName}
+              </Link>
+            ) : (
+              <span>{authorName}</span>
+            )}
+            {" • "}
+            {createdAt
+              ? new Date(createdAt).toLocaleDateString("th-TH")
+              : ""}
           </p>
 
           <p className="text-gray-700 dark:text-gray-300 text-sm mt-3 line-clamp-3">
@@ -70,7 +90,7 @@ const Card = ({ item, index = 0 }) => {
           </p>
         </div>
 
-        <button
+        <span
           className="
             mt-4 text-sm font-medium
             text-blue-600 dark:text-blue-400 
@@ -78,11 +98,10 @@ const Card = ({ item, index = 0 }) => {
           "
         >
           อ่านบทความ →
-        </button>
+        </span>
       </div>
     </div>
   );
 };
 
 export default Card;
-

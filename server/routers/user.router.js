@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const UserModel = require('../models/User');
-const UserController = require('../controllers/user.controller');
+const UserModel = require("../models/User");
+const UserController = require("../controllers/user.controller");
 
 //loaclhost:5000/api/v1/user/register
 router.post("/register", UserController.registerUser);

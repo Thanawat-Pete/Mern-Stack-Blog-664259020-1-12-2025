@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router";
+import UserPage from "../pages/UserPage.jsx";
 
 import MainLayout from "../layouts/MainLayout.jsx"
 import Home from "../pages/Home.jsx"
@@ -8,6 +9,8 @@ import ArticlePage from "../pages/ArticlePage.jsx";
 import Create from "../pages/Create.jsx";
 import Edit from "../pages/Edit.jsx";
 import AriticleByAuthor from "../pages/AriticleByAuthor.jsx";
+import NotAllowed from "../pages/NotAllowed.jsx";
+import NotFound from "../pages/NotFound.jsx";
 
 const router = createBrowserRouter([
   {
@@ -20,27 +23,35 @@ const router = createBrowserRouter([
       },
       {
         path: "/login",
-        element: <Login />
+        element:  <UserPage> <Login /> </UserPage> 
       },
       {
         path: "/register",
-        element: <Register />
+        element: <UserPage> <Register /> </UserPage> 
       },
       {
         path: "/article/:id",
         element: <ArticlePage />
       },
       {
-        path: "/create",
+        path: "/create-article",
         element: <Create />
       },
       {
         path: "/article/edit/:id",
-        element: <Edit />
+        element: <Edit /> 
       },
       {
         path: "/article/author/:author",
         element: <AriticleByAuthor />
+      },
+      {
+        path: "/notallowed",
+        element: <NotAllowed />
+      },
+      {
+        path: "*",
+        element: <NotFound />
       }
     ],
   },
