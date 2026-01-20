@@ -1,4 +1,5 @@
 const ArticleModel = require('../models/Article');
+const supabase = require("../config/supabase");
 
 exports.getAllArticles = async (req, res) => {
   try {
@@ -70,7 +71,7 @@ exports.createArticle= async (req, res) => {
         }
         const newArticle = new ArticleModel({
             title,
-            cover: req.file.filenaseUrl,
+            cover,
             summary,
             content,
             author: authorId
@@ -113,6 +114,20 @@ exports.updateArticle = async (req, res) => {
                 message: "You are not authorized to update this post"
             });
         } else {
+            // Delete old file from Supabase if cover is changed
+            if (cover !== articleDoc.cover && articleDoc.cover) {
+                try {
+                    const urlParts = articleDoc.cover.split('/storage/v1/object/public/uploads/');
+                    if (urlParts.length > 1) {
+                        const filePath = urlParts[1];
+                        await supabase.storage.from('uploads').remove([filePath]);
+                    }
+                } catch (fileError) {
+                    console.error('Error deleting old file from Supabase:', fileError);
+                    // Continue with update even if file deletion fails
+                }
+            }
+
             // articleDoc.title = title;
             // articleDoc.cover = cover;
             // articleDoc.content = content;
@@ -168,6 +183,21 @@ exports.deleteArticle = async (req, res) => {
                 message: 'Article not found'
             });
         }
+
+        // Delete file from Supabase if cover exists
+        if (deletedArticle.cover) {
+            try {
+                const urlParts = deletedArticle.cover.split('/storage/v1/object/public/uploads/');
+                if (urlParts.length > 1) {
+                    const filePath = urlParts[1];
+                    await supabase.storage.from('uploads').remove([filePath]);
+                }
+            } catch (fileError) {
+                console.error('Error deleting file from Supabase:', fileError);
+                // Continue with article deletion even if file deletion fails
+            }
+        }
+
         res.status(200).send({
             message: 'Article deleted successfully'
         });
